@@ -47,22 +47,43 @@ initial_grid = [
 root = tk.Tk()
 root.title("Sudoku Solver Dashboard")
 
-# Create a grid of labels for displaying the Sudoku grid
-grid_labels = [[tk.Label(root, width=2, height=1, font=("Arial", 18), borderwidth=1, relief="solid") 
-                for _ in range(9)] for _ in range(9)]
-for i in range(9):
-    for j in range(9):
-        grid_labels[i][j].grid(row=i, column=j)
 
-# Display the initial grid
+# Wrapper frame to center the whole grid
+wrapper = tk.Frame(root)
+wrapper.pack(pady=20)
+
+# Sudoku Grid (3x3 blocks of 3x3 labels)
+grid_labels = [[None for _ in range(9)] for _ in range(9)]
+for big_row in range(3):
+    for big_col in range(3):
+        block = tk.Frame(wrapper, highlightbackground="black", highlightthickness=2)
+        block.grid(row=big_row, column=big_col, padx=1, pady=1)
+        for i in range(3):
+            for j in range(3):
+                row = big_row * 3 + i
+                col = big_col * 3 + j
+                label = tk.Label(
+                    block,
+                    width=4,
+                    height=2,
+                    font=("Arial", 16),
+                    borderwidth=1,
+                    relief="solid",
+                    bg="white"
+                )
+                label.grid(row=i, column=j)
+                grid_labels[row][col] = label
+
+# Frame for buttons
+button_frame = tk.Frame(root)
+button_frame.pack(pady=10)
 display_grid(initial_grid, grid_labels)
 
-# Add buttons for selecting the solving method
-hill_climbing_button = tk.Button(root, text="Run Hill Climbing", command=run_hill_climbing)
-hill_climbing_button.grid(row=10, column=0, columnspan=4, pady=10)
+hill_climbing_button = tk.Button(button_frame, text="Run Hill Climbing", command=run_hill_climbing)
+hill_climbing_button.grid(row=0, column=0, padx=20)
 
-a_star_button = tk.Button(root, text="Run A* Search", command=run_a_star)
-a_star_button.grid(row=10, column=5, columnspan=4, pady=10)
+a_star_button = tk.Button(button_frame, text="Run A* Search", command=run_a_star)
+a_star_button.grid(row=0, column=1, padx=20)
 
 # Run the Tkinter event loop
 root.mainloop()

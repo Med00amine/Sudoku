@@ -8,7 +8,7 @@ def count_conflicts(grid):
             num = grid[row][col]
             if num != 0:
                 grid[row][col] = 0
-                if not is_valid(grid, row, col, num):
+                if(is_valid(grid, row, col, num))==False:
                     conflicts += 1
                 grid[row][col] = num
     return conflicts
