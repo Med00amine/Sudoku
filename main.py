@@ -1,9 +1,10 @@
+import tkinter as tk
+from tkinter import messagebox
+import time
 from sudoku import *
 from informed_solver import hill_climbing
 from optimal_solver import a_star
-import time
-import tkinter as tk
-from tkinter import messagebox
+from PIL import Image, ImageTk
 
 # Difficulty-based Sudoku grids
 puzzles = {
@@ -52,6 +53,7 @@ puzzles = {
         [6, 0, 9, 0, 0, 0, 0, 0, 1]    
     ]
 }
+
 # Set default difficulty
 current_difficulty = "Easy"
 initial_grid = puzzles[current_difficulty]
@@ -60,7 +62,11 @@ initial_grid = puzzles[current_difficulty]
 def display_grid(grid, labels):
     for i in range(9):
         for j in range(9):
-            labels[i][j].config(text=str(grid[i][j]) if grid[i][j] != 0 else "")
+            value = grid[i][j]
+            labels[i][j].config(
+                text=str(value) if value != 0 else "",
+                fg="black" if value != 0 else "gray"
+            )
 
 # Update grid when difficulty is changed
 def update_difficulty(new_difficulty):
@@ -84,47 +90,101 @@ def run_a_star():
     display_grid(a_star_grid, grid_labels)
     messagebox.showinfo("A* Search Result", f"Iterations: {a_star_iterations}\nTime: {a_star_time:.2f}s")
 
-# GUI setup
-root = tk.Tk()
-root.title("Sudoku Solver Dashboard")
+# Menu page
+def show_menu():
+    menu = tk.Tk()
+    menu.title("Sudoku Solver Menu")
+    menu.geometry("400x300")
+    menu.configure(bg="#d9f2fa")  # Soft pastel blue background
 
-# Grid wrapper
-wrapper = tk.Frame(root)
-wrapper.pack(pady=20)
+    # Center the window
+    menu.update_idletasks()
+    screen_width = menu.winfo_screenwidth()
+    screen_height = menu.winfo_screenheight()
+    x = (screen_width // 2) - (400 // 2)  # 400 is the width of the menu
+    y = (screen_height // 2) - (300 // 2)  # 300 is the height of the menu
+    menu.geometry(f"400x300+{x}+{y}")
 
-# 9x9 Sudoku grid using 3x3 blocks
-grid_labels = [[None for _ in range(9)] for _ in range(9)]
-for big_row in range(3):
-    for big_col in range(3):
-        block = tk.Frame(wrapper, highlightbackground="black", highlightthickness=2)
-        block.grid(row=big_row, column=big_col, padx=1, pady=1)
-        for i in range(3):
-            for j in range(3):
-                row = big_row * 3 + i
-                col = big_col * 3 + j
-                label = tk.Label(block, width=4, height=2, font=("Arial", 16),
-                                 borderwidth=1, relief="solid", bg="white")
-                label.grid(row=i, column=j)
-                grid_labels[row][col] = label
+    # Load the .png file as an icon
+    icon = ImageTk.PhotoImage(Image.open("sudoku_icon.png"))
+    menu.iconphoto(True, icon)
 
-# Difficulty dropdown
-difficulty_frame = tk.Frame(root)
-difficulty_frame.pack(pady=5)
+    # Title
+    tk.Label(menu, text="Welcome to Sudoku Solver", font=("Arial", 18, "bold"), bg="#d9f2fa", fg="#333").pack(pady=20)
 
-tk.Label(difficulty_frame, text="Difficulty:").pack(side="left")
-difficulty_var = tk.StringVar(value=current_difficulty)
-difficulty_menu = tk.OptionMenu(difficulty_frame, difficulty_var, *puzzles.keys(), command=update_difficulty)
-difficulty_menu.pack(side="left")
+    # Buttons
+    tk.Button(menu, text="Start", font=("Arial", 14), bg="#4CAF50", fg="white", command=lambda: [menu.destroy(), show_dashboard()]).pack(pady=10)
+    tk.Button(menu, text="Exit", font=("Arial", 14), bg="#f44336", fg="white", command=menu.destroy).pack(pady=10)
 
-# Buttons
-button_frame = tk.Frame(root)
-button_frame.pack(pady=10)
+    menu.mainloop()
 
-tk.Button(button_frame, text="Run Hill Climbing", command=run_hill_climbing).grid(row=0, column=0, padx=20)
-tk.Button(button_frame, text="Run A* Search", command=run_a_star).grid(row=0, column=1, padx=20)
 
-# Show initial grid
-display_grid(initial_grid, grid_labels)
+# Main Sudoku solver dashboard
+def show_dashboard():
+    global root, grid_labels
 
-# Run app
-root.mainloop()
+    root = tk.Tk()
+    root.title("Sudoku Solver Dashboard")
+    root.configure(bg="#d9f2fa")  # Soft pastel blue background
+
+    # Center the window
+    root.update_idletasks()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    window_width = 600  # Adjust this based on your dashboard size
+    window_height = 700  # Adjust this based on your dashboard size
+    x = (screen_width // 2) - (window_width // 2)
+    y = (screen_height // 2) - (window_height // 2)
+    root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+    # Use the .png file as the icon
+    icon = ImageTk.PhotoImage(Image.open("sudoku_icon.png"))
+    root.iconphoto(True, icon)
+
+    # Title
+    tk.Label(root, text="Sudoku Solver", font=("Arial", 24, "bold"), bg="#d9f2fa", fg="#333").pack(pady=10)
+
+    # Grid wrapper
+    wrapper = tk.Frame(root, bg="#ffffff")  # White background for the grid wrapper
+    wrapper.pack(pady=20)
+
+    # 9x9 Sudoku grid using 3x3 blocks
+    grid_labels = [[None for _ in range(9)] for _ in range(9)]
+    for big_row in range(3):
+        for big_col in range(3):
+            block = tk.Frame(wrapper, highlightbackground="black", highlightthickness=2, bg="#ffffff")
+            block.grid(row=big_row, column=big_col, padx=2, pady=2)
+            for i in range(3):
+                for j in range(3):
+                    row = big_row * 3 + i
+                    col = big_col * 3 + j
+                    label = tk.Label(block, width=4, height=2, font=("Arial", 16),
+                                     borderwidth=1, relief="solid", bg="#f9f9f9")
+                    label.grid(row=i, column=j)
+                    grid_labels[row][col] = label
+
+    # Difficulty dropdown
+    difficulty_frame = tk.Frame(root, bg="#d9f2fa")
+    difficulty_frame.pack(pady=5)
+
+    tk.Label(difficulty_frame, text="Difficulty:", bg="#d9f2fa", fg="#333").pack(side="left")
+    difficulty_var = tk.StringVar(value=current_difficulty)
+    difficulty_menu = tk.OptionMenu(difficulty_frame, difficulty_var, *puzzles.keys(), command=update_difficulty)
+    difficulty_menu.config(bg="#4CAF50", fg="white", font=("Arial", 12))
+    difficulty_menu.pack(side="left")
+
+    # Buttons
+    button_frame = tk.Frame(root, bg="#d9f2fa")
+    button_frame.pack(pady=10)
+
+    tk.Button(button_frame, text="Run Hill Climbing", font=("Arial", 12), bg="#4CAF50", fg="white", command=run_hill_climbing).grid(row=0, column=0, padx=20)
+    tk.Button(button_frame, text="Run A* Search", font=("Arial", 12), bg="#2196F3", fg="white", command=run_a_star).grid(row=0, column=1, padx=20)
+
+    # Show initial grid
+    display_grid(initial_grid, grid_labels)
+
+    # Run app
+    root.mainloop()
+
+# Start the application with the menu
+show_menu()
