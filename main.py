@@ -200,8 +200,6 @@ def show_dashboard():
     back_btn.bind("<Enter>", on_enter)
     back_btn.bind("<Leave>", on_leave)
 
-    tk.Label(root, text="Sudoku Solver", font=("Arial", 24, "bold"), bg="#d9f2fa", fg="#333").pack(pady=(10, 0))
-
     # Timer label
     timer_label = tk.Label(root, text="Time: 00:00", font=("Arial", 14), bg="#d9f2fa", fg="#333")
     timer_label.pack(pady=5)
@@ -264,8 +262,6 @@ def show_dashboard():
                 "Hill Climbing Result",
                 f"Iterations: {steps}\nConflicts: {conflicts}\nTime: {elapsed:.2f}s"
             )
-
-    tk.Button(top_frame, text="Solve", font=("Arial", 12), command=run_selected_solver).pack(side="left", padx=10)
 
     # Sudoku grid
     wrapper = tk.Frame(root, bg="#ffffff")
@@ -353,21 +349,152 @@ def show_dashboard():
                 user_entries[i][j] = False
                 update_pencil_marks(i, j)
 
-    def undo():
-        if move_stack:
-            i, j, prev_text, prev_pencil = move_stack.pop()
-            redo_stack.append((i, j, grid_labels[i][j].cget("text"), set(pencil_marks[i][j])))
-            grid_labels[i][j].config(text=prev_text, fg="black", font=("Arial", 16))
-            pencil_marks[i][j] = set(prev_pencil)
-            update_pencil_marks(i, j)
+    def clear_board():
+        for i in range(9):
+            for j in range(9):
+                if initial_grid[i][j] == 0:
+                    grid_labels[i][j].config(text="", fg="black", font=("Arial", 16))
+                    pencil_marks[i][j].clear()
+                    update_pencil_marks(i, j)
+        move_stack.clear()
+        redo_stack.clear()
+        timer_running[0] = False
+        timer_label.config(text="Time: 00:00")
 
-    def redo():
-        if redo_stack:
-            i, j, next_text, next_pencil = redo_stack.pop()
-            move_stack.append((i, j, grid_labels[i][j].cget("text"), set(pencil_marks[i][j])))
-            grid_labels[i][j].config(text=next_text, fg="black", font=("Arial", 16))
-            pencil_marks[i][j] = set(next_pencil)
-            update_pencil_marks(i, j)
+    # Load and resize button images (small, e.g., 28x28)
+    clear_img = Image.open("clear.png").resize((28, 28), Image.LANCZOS)
+    clear_photo = ImageTk.PhotoImage(clear_img)
+    solve_img = Image.open("ai.png").resize((28, 28), Image.LANCZOS)
+    solve_photo = ImageTk.PhotoImage(solve_img)
+    reset_img = Image.open("reset.png").resize((28, 28), Image.LANCZOS)
+    reset_photo = ImageTk.PhotoImage(reset_img)
+    pause_img = Image.open("pause-play.png").resize((28, 28), Image.LANCZOS)
+    pause_photo = ImageTk.PhotoImage(pause_img)
+
+    # Add control buttons (with images, small size, no color)
+    control_frame = tk.Frame(root, bg="#d9f2fa")
+    control_frame.pack(pady=5)
+
+    clear_btn = tk.Button(
+        control_frame, image=clear_photo, command=clear_board,
+        bg="#d9f2fa", activebackground="#d9f2fa", borderwidth=0, width=32, height=32, cursor="hand2"
+    )
+    clear_btn.image = clear_photo
+    clear_btn.pack(side="left", padx=3)
+
+    pause_btn = tk.Button(
+        control_frame, image=pause_photo,
+        bg="#d9f2fa", activebackground="#d9f2fa", borderwidth=0, width=32, height=32, cursor="hand2",
+        command=lambda: [timer_running.__setitem__(0, not timer_running[0]), update_timer() if timer_running[0] else None]
+    )
+    pause_btn.image = pause_photo
+    pause_btn.pack(side="left", padx=3)
+
+    reset_btn = tk.Button(
+        control_frame, image=reset_photo,
+        bg="#d9f2fa", activebackground="#d9f2fa", borderwidth=0, width=32, height=32, cursor="hand2",
+        command=lambda: [display_grid(initial_grid, grid_labels), clear_board()]
+    )
+    reset_btn.image = reset_photo
+    reset_btn.pack(side="left", padx=3)
+
+    solve_btn = tk.Button(
+        control_frame, image=solve_photo,
+        bg="#d9f2fa", activebackground="#d9f2fa", borderwidth=0, width=32, height=32, cursor="hand2",
+        command=run_selected_solver
+    )
+    solve_btn.image = solve_photo
+    solve_btn.pack(side="left", padx=3)
+
+    # Color the difficulty, algorithm, and solve buttons
+    difficulty_menu.config(bg="#ffe082", activebackground="#ffd54f")
+    algo_menu.config(bg="#c8e6c9", activebackground="#81c784")
+
+    # Sudoku grid
+    wrapper = tk.Frame(root, bg="#ffffff")
+    wrapper.pack(pady=10)
+
+    grid_labels = [[None for _ in range(9)] for _ in range(9)]
+    user_entries = [[False for _ in range(9)] for _ in range(9)]
+    pencil_marks = [[set() for _ in range(9)] for _ in range(9)]  # For pencil marks
+    selected_cell = [None, None]
+    move_stack = []  # For undo/redo
+    redo_stack = []
+
+    # Get the solution grid using your a_star solver
+    solution_grid, _ = a_star(initial_grid)
+
+    def check_win():
+        for i in range(9):
+            for j in range(9):
+                user_val = grid_labels[i][j].cget("text")
+                sol_val = str(solution_grid[i][j])
+                if user_val != sol_val:
+                    return False
+        return True
+
+    def highlight_related(i, j):
+        for x in range(9):
+            for y in range(9):
+                grid_labels[x][y].config(bg="#f9f9f9")
+        for k in range(9):
+            grid_labels[i][k].config(bg="#e3f2fd")  # Row
+            grid_labels[k][j].config(bg="#e3f2fd")  # Col
+        block_row, block_col = i//3, j//3
+        for x in range(block_row*3, block_row*3+3):
+            for y in range(block_col*3, block_col*3+3):
+                grid_labels[x][y].config(bg="#bbdefb")
+        grid_labels[i][j].config(bg="#ffe082")  # Selected cell
+
+    def cell_click(event, i, j):
+        selected_cell[0], selected_cell[1] = i, j
+        highlight_related(i, j)
+
+    def update_pencil_marks(i, j):
+        label = grid_labels[i][j]
+        if pencil_marks[i][j]:
+            label.config(text="\n".join(sorted(str(n) for n in pencil_marks[i][j])), fg="#888", font=("Arial", 8))
+        else:
+            label.config(text="", fg="black", font=("Arial", 16))
+
+    def key_press(event):
+        i, j = selected_cell
+        if i is not None and j is not None and initial_grid[i][j] == 0:
+            if not timer_running[0]:
+                timer_running[0] = True
+                start_time[0] = time.time()
+                update_timer()
+            if event.char in "123456789":
+                prev = grid_labels[i][j].cget("text")
+                move_stack.append((i, j, prev, set(pencil_marks[i][j])))
+                redo_stack.clear()
+                correct = (int(event.char) == solution_grid[i][j])
+                color = "green" if correct else "red"
+                grid_labels[i][j].config(text=event.char, fg=color, font=("Arial", 16))
+                pencil_marks[i][j].clear()
+                user_entries[i][j] = True
+                if check_win():
+                    timer_running[0] = False
+                    for x in range(9):
+                        for y in range(9):
+                            grid_labels[x][y].config(bg="#c8e6c9")
+                    messagebox.showinfo("Congratulations!", f"You are a winner!\nTime: {timer_label.cget('text')[6:]}")
+            elif event.char == "p":  # Pencil mode
+                num = simpledialog.askstring("Pencil Mark", "Enter number(s) 1-9 (comma separated):")
+                if num:
+                    prev = set(pencil_marks[i][j])
+                    move_stack.append((i, j, grid_labels[i][j].cget("text"), prev))
+                    redo_stack.clear()
+                    pencil_marks[i][j] = set(n for n in num if n in "123456789")
+                    update_pencil_marks(i, j)
+            elif event.keysym in ("BackSpace", "Delete"):
+                prev = grid_labels[i][j].cget("text")
+                move_stack.append((i, j, prev, set(pencil_marks[i][j])))
+                redo_stack.clear()
+                grid_labels[i][j].config(text="", fg="black", font=("Arial", 16))
+                pencil_marks[i][j].clear()
+                user_entries[i][j] = False
+                update_pencil_marks(i, j)
 
     def clear_board():
         for i in range(9):
@@ -381,13 +508,9 @@ def show_dashboard():
         timer_running[0] = False
         timer_label.config(text="Time: 00:00")
 
-    # Add control buttons
-    control_frame = tk.Frame(root, bg="#d9f2fa")
-    control_frame.pack(pady=5)
-    tk.Button(control_frame, text="Undo", command=undo, font=("Arial", 12)).pack(side="left", padx=5)
-    tk.Button(control_frame, text="Redo", command=redo, font=("Arial", 12)).pack(side="left", padx=5)
-    tk.Button(control_frame, text="Clear", command=clear_board, font=("Arial", 12)).pack(side="left", padx=5)
-    tk.Button(control_frame, text="Pause/Resume", font=("Arial", 12), command=lambda: [timer_running.__setitem__(0, not timer_running[0]), update_timer() if timer_running[0] else None]).pack(side="left", padx=5)
+    # Color the difficulty, algorithm, and solve buttons
+    difficulty_menu.config(bg="#ffe082", activebackground="#ffd54f")
+    algo_menu.config(bg="#c8e6c9", activebackground="#81c784")
 
     for big_row in range(3):
         for big_col in range(3):
