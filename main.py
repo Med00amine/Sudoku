@@ -121,35 +121,67 @@ def show_menu():
 
 # Main Sudoku solver dashboard
 def show_dashboard():
-    global root, grid_labels
+    global root, grid_labels, selected_cell, user_entries, solution_grid
 
     root = tk.Tk()
     root.title("Sudoku Solver Dashboard")
-    root.configure(bg="#d9f2fa")  # Soft pastel blue background
+    root.configure(bg="#d9f2fa")
 
     # Center the window
     root.update_idletasks()
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
-    window_width = 600  # Adjust this based on your dashboard size
-    window_height = 700  # Adjust this based on your dashboard size
+    window_width = 600
+    window_height = 700
     x = (screen_width // 2) - (window_width // 2)
     y = (screen_height // 2) - (window_height // 2)
     root.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-    # Use the .png file as the icon
     icon = ImageTk.PhotoImage(Image.open("sudoku_icon.png"))
     root.iconphoto(True, icon)
 
-    # Title
     tk.Label(root, text="Sudoku Solver", font=("Arial", 24, "bold"), bg="#d9f2fa", fg="#333").pack(pady=10)
 
-    # Grid wrapper
-    wrapper = tk.Frame(root, bg="#ffffff")  # White background for the grid wrapper
+    wrapper = tk.Frame(root, bg="#ffffff")
     wrapper.pack(pady=20)
 
-    # 9x9 Sudoku grid using 3x3 blocks
     grid_labels = [[None for _ in range(9)] for _ in range(9)]
+    user_entries = [[False for _ in range(9)] for _ in range(9)]
+    selected_cell = [None, None]
+
+    # Get the solution grid using your a_star solver
+    solution_grid, _ = a_star(initial_grid)
+
+    def check_win():
+        for i in range(9):
+            for j in range(9):
+                user_val = grid_labels[i][j].cget("text")
+                sol_val = str(solution_grid[i][j])
+                if user_val != sol_val:
+                    return False
+        return True
+
+    def cell_click(event, i, j):
+        selected_cell[0], selected_cell[1] = i, j
+        for x in range(9):
+            for y in range(9):
+                grid_labels[x][y].config(bg="#f9f9f9")
+        grid_labels[i][j].config(bg="#ffe082")  # Highlight selected cell
+
+    def key_press(event):
+        i, j = selected_cell
+        if i is not None and j is not None and initial_grid[i][j] == 0:
+            if event.char in "123456789":
+                correct = (int(event.char) == solution_grid[i][j])
+                color = "green" if correct else "red"
+                grid_labels[i][j].config(text=event.char, fg=color)
+                user_entries[i][j] = True
+                if check_win():
+                    messagebox.showinfo("Congratulations!", "You are a winner!")
+            elif event.keysym in ("BackSpace", "Delete"):
+                grid_labels[i][j].config(text="", fg="black")
+                user_entries[i][j] = False
+
     for big_row in range(3):
         for big_col in range(3):
             block = tk.Frame(wrapper, highlightbackground="black", highlightthickness=2, bg="#ffffff")
@@ -158,10 +190,16 @@ def show_dashboard():
                 for j in range(3):
                     row = big_row * 3 + i
                     col = big_col * 3 + j
+                    value = initial_grid[row][col]
                     label = tk.Label(block, width=4, height=2, font=("Arial", 16),
-                                     borderwidth=1, relief="solid", bg="#f9f9f9")
+                                     borderwidth=1, relief="solid", bg="#f9f9f9",
+                                     text=str(value) if value != 0 else "",
+                                     fg="black")
                     label.grid(row=i, column=j)
+                    label.bind("<Button-1>", lambda e, x=row, y=col: cell_click(e, x, y))
                     grid_labels[row][col] = label
+
+    root.bind("<Key>", key_press)
 
     # Difficulty dropdown
     difficulty_frame = tk.Frame(root, bg="#d9f2fa")
