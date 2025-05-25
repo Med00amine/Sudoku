@@ -112,9 +112,46 @@ def show_menu():
     # Title
     tk.Label(menu, text="Welcome to Sudoku Solver", font=("Arial", 18, "bold"), bg="#d9f2fa", fg="#333").pack(pady=20)
 
-    # Buttons
-    tk.Button(menu, text="Start", font=("Arial", 14), bg="#4CAF50", fg="white", command=lambda: [menu.destroy(), show_dashboard()]).pack(pady=10)
-    tk.Button(menu, text="Exit", font=("Arial", 14), bg="#f44336", fg="white", command=menu.destroy).pack(pady=10)
+    # Load images for buttons (make them bigger)
+    start_img = Image.open("start.png")
+    start_img = start_img.resize((80, 80), Image.LANCZOS)
+    start_photo = ImageTk.PhotoImage(start_img)
+
+    exit_img = Image.open("exit.png")
+    exit_img = exit_img.resize((80, 80), Image.LANCZOS)
+    exit_photo = ImageTk.PhotoImage(exit_img)
+
+    # Start button (image only, bigger)
+    start_btn = tk.Button(
+        menu,
+        image=start_photo,
+        borderwidth=0,
+        highlightthickness=0,
+        bg="#d9f2fa",
+        activebackground="#e0e0e0",
+        command=lambda: [menu.destroy(), show_dashboard()],
+        cursor="hand2",
+        width=90,  # slightly bigger than image
+        height=90
+    )
+    start_btn.image = start_photo  # Prevent garbage collection
+    start_btn.pack(pady=15)
+
+    # Exit button (image only, bigger)
+    exit_btn = tk.Button(
+        menu,
+        image=exit_photo,
+        borderwidth=0,
+        highlightthickness=0,
+        bg="#d9f2fa",
+        activebackground="#e0e0e0",
+        command=menu.destroy,
+        cursor="hand2",
+        width=90,
+        height=90
+    )
+    exit_btn.image = exit_photo  # Prevent garbage collection
+    exit_btn.pack(pady=15)
 
     menu.mainloop()
 
@@ -132,7 +169,7 @@ def show_dashboard():
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     window_width = 600
-    window_height = 700
+    window_height = 680  # height
     x = (screen_width // 2) - (window_width // 2)
     y = (screen_height // 2) - (window_height // 2)
     root.geometry(f"{window_width}x{window_height}+{x}+{y}")
@@ -140,7 +177,46 @@ def show_dashboard():
     icon = ImageTk.PhotoImage(Image.open("sudoku_icon.png"))
     root.iconphoto(True, icon)
 
+    # Back to Menu button (top-right) with ONLY retour.png as the button
+    router_img = Image.open("retour.png")
+    router_img = router_img.resize((32, 32), Image.LANCZOS)
+    router_photo = ImageTk.PhotoImage(router_img)
+
+    def on_enter(e):
+        back_btn.config(bg="#e0e0e0")  # Light hover effect
+
+    def on_leave(e):
+        back_btn.config(bg="#d9f2fa")  # Match dashboard bg
+
+    back_btn = tk.Button(
+        root,
+        image=router_photo,
+        bg="#d9f2fa",  # Match dashboard background
+        activebackground="#e0e0e0",
+        borderwidth=0,
+        highlightthickness=0,
+        command=lambda: [root.destroy(), show_menu()],
+        cursor="hand2"
+    )
+    back_btn.image = router_photo  # Prevent garbage collection
+    back_btn.place(x=window_width-50, y=20, width=40, height=40)
+    back_btn.bind("<Enter>", on_enter)
+    back_btn.bind("<Leave>", on_leave)
+
     tk.Label(root, text="Sudoku Solver", font=("Arial", 24, "bold"), bg="#d9f2fa", fg="#333").pack(pady=10)
+
+    # Timer label
+    timer_label = tk.Label(root, text="Time: 00:00", font=("Arial", 14), bg="#d9f2fa", fg="#333")
+    timer_label.pack(pady=5)
+    timer_running = [False]
+    start_time = [None]
+
+    def update_timer():
+        if timer_running[0]:
+            elapsed = int(time.time() - start_time[0])
+            mins, secs = divmod(elapsed, 60)
+            timer_label.config(text=f"Time: {mins:02d}:{secs:02d}")
+            root.after(1000, update_timer)
 
     wrapper = tk.Frame(root, bg="#ffffff")
     wrapper.pack(pady=20)
@@ -171,13 +247,18 @@ def show_dashboard():
     def key_press(event):
         i, j = selected_cell
         if i is not None and j is not None and initial_grid[i][j] == 0:
+            if not timer_running[0]:
+                timer_running[0] = True
+                start_time[0] = time.time()
+                update_timer()
             if event.char in "123456789":
                 correct = (int(event.char) == solution_grid[i][j])
                 color = "green" if correct else "red"
                 grid_labels[i][j].config(text=event.char, fg=color)
                 user_entries[i][j] = True
                 if check_win():
-                    messagebox.showinfo("Congratulations!", "You are a winner!")
+                    timer_running[0] = False
+                    messagebox.showinfo("Congratulations!", f"You are a winner!\nTime: {timer_label.cget('text')[6:]}")
             elif event.keysym in ("BackSpace", "Delete"):
                 grid_labels[i][j].config(text="", fg="black")
                 user_entries[i][j] = False
@@ -201,7 +282,7 @@ def show_dashboard():
 
     root.bind("<Key>", key_press)
 
-    # Difficulty dropdown
+    # Difficulty dropdown + Solver buttons
     difficulty_frame = tk.Frame(root, bg="#d9f2fa")
     difficulty_frame.pack(pady=5)
 
@@ -209,19 +290,15 @@ def show_dashboard():
     difficulty_var = tk.StringVar(value=current_difficulty)
     difficulty_menu = tk.OptionMenu(difficulty_frame, difficulty_var, *puzzles.keys(), command=update_difficulty)
     difficulty_menu.config(bg="#4CAF50", fg="white", font=("Arial", 12))
-    difficulty_menu.pack(side="left")
+    difficulty_menu.pack(side="left", padx=(0, 10))
 
-    # Buttons
-    button_frame = tk.Frame(root, bg="#d9f2fa")
-    button_frame.pack(pady=10)
-
-    tk.Button(button_frame, text="Run Hill Climbing", font=("Arial", 12), bg="#4CAF50", fg="white", command=run_hill_climbing).grid(row=0, column=0, padx=20)
-    tk.Button(button_frame, text="Run A* Search", font=("Arial", 12), bg="#2196F3", fg="white", command=run_a_star).grid(row=0, column=1, padx=20)
+    # Solver buttons next to difficulty
+    tk.Button(difficulty_frame, text="Run Hill Climbing", font=("Arial", 12), bg="#4CAF50", fg="white", command=run_hill_climbing).pack(side="left", padx=5)
+    tk.Button(difficulty_frame, text="Run A* Search", font=("Arial", 12), bg="#2196F3", fg="white", command=run_a_star).pack(side="left", padx=5)
 
     # Show initial grid
     display_grid(initial_grid, grid_labels)
 
-    # Run app
     root.mainloop()
 
 # Start the application with the menu
