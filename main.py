@@ -5,6 +5,7 @@ from sudoku import *
 from informed_solver import hill_climbing
 from optimal_solver import a_star
 from PIL import Image, ImageTk
+from solvers import BacktrackingSolver, DFSSolver, BFSSolver
 
 # Difficulty-based Sudoku grids
 puzzles = {
@@ -94,36 +95,34 @@ def run_a_star():
 def show_menu():
     menu = tk.Tk()
     menu.title("Sudoku Solver Menu")
-    menu.geometry("400x300")
-    menu.configure(bg="#d9f2fa")  # Soft pastel blue background
+    menu.geometry("400x350")
+    menu.configure(bg="#d9f2fa")
 
     # Center the window
     menu.update_idletasks()
     screen_width = menu.winfo_screenwidth()
     screen_height = menu.winfo_screenheight()
-    x = (screen_width // 2) - (400 // 2)  # 400 is the width of the menu
-    y = (screen_height // 2) - (300 // 2)  # 300 is the height of the menu
-    menu.geometry(f"400x300+{x}+{y}")
+    x = (screen_width // 2) - (400 // 2)
+    y = (screen_height // 2) - (350 // 2)
+    menu.geometry(f"400x350+{x}+{y}")
 
-    # Load the .png file as an icon
     icon = ImageTk.PhotoImage(Image.open("sudoku_icon.png"))
     menu.iconphoto(True, icon)
 
-    # Title
     tk.Label(menu, text="Welcome to Sudoku Solver", font=("Arial", 18, "bold"), bg="#d9f2fa", fg="#333").pack(pady=20)
 
-    # Load images for buttons (make them bigger)
-    start_img = Image.open("start.png")
-    start_img = start_img.resize((80, 80), Image.LANCZOS)
+    # Load images for buttons (bigger)
+    start_img = Image.open("start.png").resize((90, 90), Image.LANCZOS)
     start_photo = ImageTk.PhotoImage(start_img)
-
-    exit_img = Image.open("exit.png")
-    exit_img = exit_img.resize((80, 80), Image.LANCZOS)
+    exit_img = Image.open("exit.png").resize((90, 90), Image.LANCZOS)
     exit_photo = ImageTk.PhotoImage(exit_img)
 
-    # Start button (image only, bigger)
+    # Frame for buttons, centered
+    btn_frame = tk.Frame(menu, bg="#d9f2fa")
+    btn_frame.pack(pady=10)
+
     start_btn = tk.Button(
-        menu,
+        btn_frame,
         image=start_photo,
         borderwidth=0,
         highlightthickness=0,
@@ -131,15 +130,14 @@ def show_menu():
         activebackground="#e0e0e0",
         command=lambda: [menu.destroy(), show_dashboard()],
         cursor="hand2",
-        width=90,  # slightly bigger than image
+        width=90,
         height=90
     )
-    start_btn.image = start_photo  # Prevent garbage collection
-    start_btn.pack(pady=15)
+    start_btn.image = start_photo
+    start_btn.grid(row=0, column=0, padx=20)
 
-    # Exit button (image only, bigger)
     exit_btn = tk.Button(
-        menu,
+        btn_frame,
         image=exit_photo,
         borderwidth=0,
         highlightthickness=0,
@@ -150,8 +148,8 @@ def show_menu():
         width=90,
         height=90
     )
-    exit_btn.image = exit_photo  # Prevent garbage collection
-    exit_btn.pack(pady=15)
+    exit_btn.image = exit_photo
+    exit_btn.grid(row=0, column=1, padx=20)
 
     menu.mainloop()
 
@@ -169,7 +167,7 @@ def show_dashboard():
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     window_width = 600
-    window_height = 680  # height
+    window_height = 550
     x = (screen_width // 2) - (window_width // 2)
     y = (screen_height // 2) - (window_height // 2)
     root.geometry(f"{window_width}x{window_height}+{x}+{y}")
@@ -177,33 +175,32 @@ def show_dashboard():
     icon = ImageTk.PhotoImage(Image.open("sudoku_icon.png"))
     root.iconphoto(True, icon)
 
-    # Back to Menu button (top-right) with ONLY retour.png as the button
-    router_img = Image.open("retour.png")
-    router_img = router_img.resize((32, 32), Image.LANCZOS)
+    # Back to Menu button (top-left) with ONLY retour.png as the button
+    router_img = Image.open("retour.png").resize((32, 32), Image.LANCZOS)
     router_photo = ImageTk.PhotoImage(router_img)
 
     def on_enter(e):
-        back_btn.config(bg="#e0e0e0")  # Light hover effect
+        back_btn.config(bg="#e0e0e0")
 
     def on_leave(e):
-        back_btn.config(bg="#d9f2fa")  # Match dashboard bg
+        back_btn.config(bg="#d9f2fa")
 
     back_btn = tk.Button(
         root,
         image=router_photo,
-        bg="#d9f2fa",  # Match dashboard background
+        bg="#d9f2fa",
         activebackground="#e0e0e0",
         borderwidth=0,
         highlightthickness=0,
         command=lambda: [root.destroy(), show_menu()],
         cursor="hand2"
     )
-    back_btn.image = router_photo  # Prevent garbage collection
-    back_btn.place(x=window_width-50, y=20, width=40, height=40)
+    back_btn.image = router_photo
+    back_btn.place(x=10, y=10, width=40, height=40)
     back_btn.bind("<Enter>", on_enter)
     back_btn.bind("<Leave>", on_leave)
 
-    tk.Label(root, text="Sudoku Solver", font=("Arial", 24, "bold"), bg="#d9f2fa", fg="#333").pack(pady=10)
+    tk.Label(root, text="Sudoku Solver", font=("Arial", 24, "bold"), bg="#d9f2fa", fg="#333").pack(pady=(10, 0))
 
     # Timer label
     timer_label = tk.Label(root, text="Time: 00:00", font=("Arial", 14), bg="#d9f2fa", fg="#333")
@@ -218,8 +215,61 @@ def show_dashboard():
             timer_label.config(text=f"Time: {mins:02d}:{secs:02d}")
             root.after(1000, update_timer)
 
+    # Difficulty + Algorithm + Solver buttons in one frame
+    top_frame = tk.Frame(root, bg="#d9f2fa")
+    top_frame.pack(pady=5)
+
+    tk.Label(top_frame, text="Difficulty:", bg="#d9f2fa", fg="#333").pack(side="left")
+    difficulty_var = tk.StringVar(value=current_difficulty)
+    difficulty_menu = tk.OptionMenu(top_frame, difficulty_var, *puzzles.keys(), command=update_difficulty)
+    difficulty_menu.config(font=("Arial", 12))
+    difficulty_menu.pack(side="left", padx=(0, 10))
+
+    tk.Label(top_frame, text="Algorithm:", bg="#d9f2fa", fg="#333").pack(side="left")
+    algo_var = tk.StringVar(value="Backtracking")
+    algo_menu = tk.OptionMenu(top_frame, algo_var, "Backtracking", "DFS", "BFS", "A*", "Hill Climbing")
+    algo_menu.config(font=("Arial", 12))
+    algo_menu.pack(side="left", padx=5)
+
+    def run_selected_solver():
+        algo = algo_var.get()
+        start = time.time()
+        if algo == "Backtracking" or algo == "DFS":
+            solver = BacktrackingSolver(initial_grid)
+            grid, steps = solver.solve()
+            elapsed = time.time() - start
+            display_grid(grid, grid_labels)
+            messagebox.showinfo(
+                f"{algo} Result",
+                f"Iterations: {steps}\nConflicts: N/A\nTime: {elapsed:.2f}s"
+            )
+        elif algo == "BFS":
+            messagebox.showwarning(
+                "BFS Not Supported",
+                "BFS is not practical for Sudoku and is disabled to prevent freezing."
+            )
+        elif algo == "A*":
+            grid, steps = a_star(initial_grid)
+            elapsed = time.time() - start
+            display_grid(grid, grid_labels)
+            messagebox.showinfo(
+                "A* Result",
+                f"Iterations: {steps}\nConflicts: N/A\nTime: {elapsed:.2f}s"
+            )
+        elif algo == "Hill Climbing":
+            grid, steps, conflicts = hill_climbing(initial_grid)
+            elapsed = time.time() - start
+            display_grid(grid, grid_labels)
+            messagebox.showinfo(
+                "Hill Climbing Result",
+                f"Iterations: {steps}\nConflicts: {conflicts}\nTime: {elapsed:.2f}s"
+            )
+
+    tk.Button(top_frame, text="Solve", font=("Arial", 12), command=run_selected_solver).pack(side="left", padx=10)
+
+    # Sudoku grid
     wrapper = tk.Frame(root, bg="#ffffff")
-    wrapper.pack(pady=20)
+    wrapper.pack(pady=10)
 
     grid_labels = [[None for _ in range(9)] for _ in range(9)]
     user_entries = [[False for _ in range(9)] for _ in range(9)]
@@ -281,24 +331,7 @@ def show_dashboard():
                     grid_labels[row][col] = label
 
     root.bind("<Key>", key_press)
-
-    # Difficulty dropdown + Solver buttons
-    difficulty_frame = tk.Frame(root, bg="#d9f2fa")
-    difficulty_frame.pack(pady=5)
-
-    tk.Label(difficulty_frame, text="Difficulty:", bg="#d9f2fa", fg="#333").pack(side="left")
-    difficulty_var = tk.StringVar(value=current_difficulty)
-    difficulty_menu = tk.OptionMenu(difficulty_frame, difficulty_var, *puzzles.keys(), command=update_difficulty)
-    difficulty_menu.config(bg="#4CAF50", fg="white", font=("Arial", 12))
-    difficulty_menu.pack(side="left", padx=(0, 10))
-
-    # Solver buttons next to difficulty
-    tk.Button(difficulty_frame, text="Run Hill Climbing", font=("Arial", 12), bg="#4CAF50", fg="white", command=run_hill_climbing).pack(side="left", padx=5)
-    tk.Button(difficulty_frame, text="Run A* Search", font=("Arial", 12), bg="#2196F3", fg="white", command=run_a_star).pack(side="left", padx=5)
-
-    # Show initial grid
     display_grid(initial_grid, grid_labels)
-
     root.mainloop()
 
 # Start the application with the menu
