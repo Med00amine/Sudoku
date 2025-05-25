@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 import time
 from sudoku import *
 from informed_solver import hill_climbing
@@ -167,7 +167,7 @@ def show_dashboard():
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     window_width = 600
-    window_height = 550
+    window_height = 650
     x = (screen_width // 2) - (window_width // 2)
     y = (screen_height // 2) - (window_height // 2)
     root.geometry(f"{window_width}x{window_height}+{x}+{y}")
@@ -273,7 +273,10 @@ def show_dashboard():
 
     grid_labels = [[None for _ in range(9)] for _ in range(9)]
     user_entries = [[False for _ in range(9)] for _ in range(9)]
+    pencil_marks = [[set() for _ in range(9)] for _ in range(9)]  # For pencil marks
     selected_cell = [None, None]
+    move_stack = []  # For undo/redo
+    redo_stack = []
 
     # Get the solution grid using your a_star solver
     solution_grid, _ = a_star(initial_grid)
@@ -287,12 +290,29 @@ def show_dashboard():
                     return False
         return True
 
-    def cell_click(event, i, j):
-        selected_cell[0], selected_cell[1] = i, j
+    def highlight_related(i, j):
         for x in range(9):
             for y in range(9):
                 grid_labels[x][y].config(bg="#f9f9f9")
-        grid_labels[i][j].config(bg="#ffe082")  # Highlight selected cell
+        for k in range(9):
+            grid_labels[i][k].config(bg="#e3f2fd")  # Row
+            grid_labels[k][j].config(bg="#e3f2fd")  # Col
+        block_row, block_col = i//3, j//3
+        for x in range(block_row*3, block_row*3+3):
+            for y in range(block_col*3, block_col*3+3):
+                grid_labels[x][y].config(bg="#bbdefb")
+        grid_labels[i][j].config(bg="#ffe082")  # Selected cell
+
+    def cell_click(event, i, j):
+        selected_cell[0], selected_cell[1] = i, j
+        highlight_related(i, j)
+
+    def update_pencil_marks(i, j):
+        label = grid_labels[i][j]
+        if pencil_marks[i][j]:
+            label.config(text="\n".join(sorted(str(n) for n in pencil_marks[i][j])), fg="#888", font=("Arial", 8))
+        else:
+            label.config(text="", fg="black", font=("Arial", 16))
 
     def key_press(event):
         i, j = selected_cell
@@ -302,16 +322,72 @@ def show_dashboard():
                 start_time[0] = time.time()
                 update_timer()
             if event.char in "123456789":
+                prev = grid_labels[i][j].cget("text")
+                move_stack.append((i, j, prev, set(pencil_marks[i][j])))
+                redo_stack.clear()
                 correct = (int(event.char) == solution_grid[i][j])
                 color = "green" if correct else "red"
-                grid_labels[i][j].config(text=event.char, fg=color)
+                grid_labels[i][j].config(text=event.char, fg=color, font=("Arial", 16))
+                pencil_marks[i][j].clear()
                 user_entries[i][j] = True
                 if check_win():
                     timer_running[0] = False
+                    for x in range(9):
+                        for y in range(9):
+                            grid_labels[x][y].config(bg="#c8e6c9")
                     messagebox.showinfo("Congratulations!", f"You are a winner!\nTime: {timer_label.cget('text')[6:]}")
+            elif event.char == "p":  # Pencil mode
+                num = simpledialog.askstring("Pencil Mark", "Enter number(s) 1-9 (comma separated):")
+                if num:
+                    prev = set(pencil_marks[i][j])
+                    move_stack.append((i, j, grid_labels[i][j].cget("text"), prev))
+                    redo_stack.clear()
+                    pencil_marks[i][j] = set(n for n in num if n in "123456789")
+                    update_pencil_marks(i, j)
             elif event.keysym in ("BackSpace", "Delete"):
-                grid_labels[i][j].config(text="", fg="black")
+                prev = grid_labels[i][j].cget("text")
+                move_stack.append((i, j, prev, set(pencil_marks[i][j])))
+                redo_stack.clear()
+                grid_labels[i][j].config(text="", fg="black", font=("Arial", 16))
+                pencil_marks[i][j].clear()
                 user_entries[i][j] = False
+                update_pencil_marks(i, j)
+
+    def undo():
+        if move_stack:
+            i, j, prev_text, prev_pencil = move_stack.pop()
+            redo_stack.append((i, j, grid_labels[i][j].cget("text"), set(pencil_marks[i][j])))
+            grid_labels[i][j].config(text=prev_text, fg="black", font=("Arial", 16))
+            pencil_marks[i][j] = set(prev_pencil)
+            update_pencil_marks(i, j)
+
+    def redo():
+        if redo_stack:
+            i, j, next_text, next_pencil = redo_stack.pop()
+            move_stack.append((i, j, grid_labels[i][j].cget("text"), set(pencil_marks[i][j])))
+            grid_labels[i][j].config(text=next_text, fg="black", font=("Arial", 16))
+            pencil_marks[i][j] = set(next_pencil)
+            update_pencil_marks(i, j)
+
+    def clear_board():
+        for i in range(9):
+            for j in range(9):
+                if initial_grid[i][j] == 0:
+                    grid_labels[i][j].config(text="", fg="black", font=("Arial", 16))
+                    pencil_marks[i][j].clear()
+                    update_pencil_marks(i, j)
+        move_stack.clear()
+        redo_stack.clear()
+        timer_running[0] = False
+        timer_label.config(text="Time: 00:00")
+
+    # Add control buttons
+    control_frame = tk.Frame(root, bg="#d9f2fa")
+    control_frame.pack(pady=5)
+    tk.Button(control_frame, text="Undo", command=undo, font=("Arial", 12)).pack(side="left", padx=5)
+    tk.Button(control_frame, text="Redo", command=redo, font=("Arial", 12)).pack(side="left", padx=5)
+    tk.Button(control_frame, text="Clear", command=clear_board, font=("Arial", 12)).pack(side="left", padx=5)
+    tk.Button(control_frame, text="Pause/Resume", font=("Arial", 12), command=lambda: [timer_running.__setitem__(0, not timer_running[0]), update_timer() if timer_running[0] else None]).pack(side="left", padx=5)
 
     for big_row in range(3):
         for big_col in range(3):
@@ -333,6 +409,17 @@ def show_dashboard():
     root.bind("<Key>", key_press)
     display_grid(initial_grid, grid_labels)
     root.mainloop()
+
+def update_ui(row, col, solver):
+    # Color gradient for visited frequency
+    freq = solver.visited_cells[row][col]
+    blue = min(255, 50 + freq * 20)
+    color = f'#{"%02x"%0}{"%02x"%0}{"%02x"%blue}'
+    grid_labels[row][col].config(bg=color)
+    # Highlight current cell
+    grid_labels[row][col].config(relief="solid", bd=2)
+    root.update()
+    time.sleep(0.03)  # Control speed (replace with Tk.after for non-blocking)
 
 # Start the application with the menu
 show_menu()
