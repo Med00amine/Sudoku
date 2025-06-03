@@ -1,3 +1,4 @@
+![image_2025-06-03_134219608](https://github.com/user-attachments/assets/13e701ce-b4ff-40eb-83be-7141dc08e6f7)
 # Sudoku
 
 A simple Sudoku game that uses multiple AI algorithms: Backtracking, DFS, BFS, A, and Hill Climbing.
