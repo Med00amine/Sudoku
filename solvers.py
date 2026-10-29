@@ -1,6 +1,19 @@
 from collections import deque
 import copy
 
+
+def is_valid_move(grid, row, col, num):
+    for i in range(9):
+        if grid[row][i] == num or grid[i][col] == num:
+            return False
+    start_row, start_col = 3 * (row // 3), 3 * (col // 3)
+    for i in range(3):
+        for j in range(3):
+            if grid[start_row + i][start_col + j] == num:
+                return False
+    return True
+
+
 class SolverBase:
     def __init__(self, grid):
         self.grid = copy.deepcopy(grid)
@@ -68,7 +81,7 @@ class DFSSolver(SolverBase):
                 stack.append((grid, row, col + 1))
                 continue
             for num in range(1, 10):
-                if BacktrackingSolver(grid)._is_valid(row, col, num):
+                if is_valid_move(grid, row, col, num):
                     new_grid = copy.deepcopy(grid)
                     new_grid[row][col] = num
                     stack.append((new_grid, row, col + 1))
@@ -92,7 +105,7 @@ class BFSSolver(SolverBase):
                 queue.append((grid, row, col + 1))
                 continue
             for num in range(1, 10):
-                if BacktrackingSolver(grid)._is_valid(row, col, num):
+                if is_valid_move(grid, row, col, num):
                     new_grid = copy.deepcopy(grid)
                     new_grid[row][col] = num
                     queue.append((new_grid, row, col + 1))
