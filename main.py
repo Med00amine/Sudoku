@@ -6,54 +6,14 @@ from informed_solver import hill_climbing
 from optimal_solver import a_star
 from PIL import Image, ImageTk
 from solvers import BacktrackingSolver, DFSSolver, BFSSolver
+import os
 
-# Difficulty-based Sudoku grids
-puzzles = {
-    "Easy": [
-        [0, 0, 0, 2, 6, 0, 7, 0, 1],
-        [6, 8, 0, 0, 7, 0, 0, 9, 0],
-        [1, 9, 0, 0, 0, 4, 5, 0, 0],
-        [8, 2, 0, 1, 0, 0, 0, 4, 0],
-        [0, 0, 4, 6, 0, 2, 9, 0, 0],
-        [0, 5, 0, 0, 0, 3, 0, 2, 8],
-        [0, 0, 9, 3, 0, 0, 0, 7, 4],
-        [0, 4, 0, 0, 5, 0, 0, 3, 6],
-        [7, 0, 3, 0, 1, 8, 0, 0, 0]
-    ],
-    "Moderate": [
-        [0, 2, 0, 6, 0, 8, 0, 0, 0],
-        [5, 8, 0, 0, 0, 9, 7, 0, 0],
-        [0, 0, 0, 0, 4, 0, 0, 0, 0],
-        [3, 7, 0, 0, 0, 0, 5, 0, 0],
-        [6, 0, 0, 0, 0, 0, 0, 0, 4],
-        [0, 0, 8, 0, 0, 0, 0, 1, 3],
-        [0, 0, 0, 0, 2, 0, 0, 0, 0],
-        [0, 0, 9, 8, 0, 0, 0, 3, 6],
-        [0, 0, 0, 3, 0, 6, 0, 9, 0]
-    ],
-    "Difficult": [
-        [0, 0, 0, 0, 0, 7, 0, 0, 9],
-        [0, 3, 0, 0, 2, 0, 0, 0, 8],
-        [0, 0, 9, 6, 0, 0, 5, 0, 0],
-        [0, 0, 5, 3, 0, 0, 9, 0, 0],
-        [0, 1, 0, 0, 8, 0, 0, 0, 2],
-        [6, 0, 0, 0, 0, 4, 0, 0, 0],
-        [3, 0, 0, 0, 0, 0, 0, 1, 0],
-        [0, 4, 1, 0, 0, 0, 0, 0, 7],
-        [0, 0, 7, 0, 0, 0, 3, 0, 0]
-    ],
-    "Expert": [
-        [0, 0, 0, 0, 0, 0, 1, 0, 7],
-        [2, 0, 0, 3, 0, 0, 0, 5, 0],
-        [0, 6, 1, 0, 0, 2, 0, 0, 0],
-        [0, 0, 0, 0, 9, 0, 0, 0, 2],
-        [0, 0, 5, 0, 0, 0, 3, 0, 0],
-        [4, 0, 0, 0, 5, 0, 0, 0, 6],
-        [0, 0, 0, 0, 0, 0, 0, 8, 0],
-        [0, 0, 3, 8, 0, 1, 0, 0, 0],
-        [6, 0, 9, 0, 0, 0, 0, 0, 1]    
-    ]
-}
+ASSETS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def asset(name):
+    return os.path.join(ASSETS_DIR, name)
+
+from puzzles import puzzles
 
 # Set default difficulty
 current_difficulty = "Easy"
@@ -71,9 +31,10 @@ def display_grid(grid, labels):
 
 # Update grid when difficulty is changed
 def update_difficulty(new_difficulty):
-    global current_difficulty, initial_grid
+    global current_difficulty, initial_grid, solution_grid
     current_difficulty = new_difficulty
     initial_grid = puzzles[new_difficulty]
+    solution_grid, _ = BacktrackingSolver(initial_grid).solve()
     display_grid(initial_grid, grid_labels)
 
 # Solver functions
@@ -106,15 +67,15 @@ def show_menu():
     y = (screen_height // 2) - (350 // 2)
     menu.geometry(f"400x350+{x}+{y}")
 
-    icon = ImageTk.PhotoImage(Image.open("sudoku_icon.png"))
+    icon = ImageTk.PhotoImage(Image.open(asset("sudoku_icon.png")))
     menu.iconphoto(True, icon)
 
     tk.Label(menu, text="Welcome to Sudoku Solver", font=("Arial", 18, "bold"), bg="#d9f2fa", fg="#333").pack(pady=20)
 
     # Load images for buttons (bigger)
-    start_img = Image.open("start.png").resize((90, 90), Image.LANCZOS)
+    start_img = Image.open(asset("start.png")).resize((90, 90), Image.LANCZOS)
     start_photo = ImageTk.PhotoImage(start_img)
-    exit_img = Image.open("exit.png").resize((90, 90), Image.LANCZOS)
+    exit_img = Image.open(asset("exit.png")).resize((90, 90), Image.LANCZOS)
     exit_photo = ImageTk.PhotoImage(exit_img)
 
     # Frame for buttons, centered
@@ -172,11 +133,11 @@ def show_dashboard():
     y = (screen_height // 2) - (window_height // 2)
     root.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-    icon = ImageTk.PhotoImage(Image.open("sudoku_icon.png"))
+    icon = ImageTk.PhotoImage(Image.open(asset("sudoku_icon.png")))
     root.iconphoto(True, icon)
 
     # Back to Menu button (top-left) with ONLY retour.png as the button
-    router_img = Image.open("retour.png").resize((32, 32), Image.LANCZOS)
+    router_img = Image.open(asset("retour.png")).resize((32, 32), Image.LANCZOS)
     router_photo = ImageTk.PhotoImage(router_img)
 
     def on_enter(e):
@@ -232,8 +193,8 @@ def show_dashboard():
     def run_selected_solver():
         algo = algo_var.get()
         start = time.time()
-        if algo == "Backtracking" or algo == "DFS":
-            solver = BacktrackingSolver(initial_grid)
+        if algo in ("Backtracking", "DFS"):
+            solver = BacktrackingSolver(initial_grid) if algo == "Backtracking" else DFSSolver(initial_grid)
             grid, steps = solver.solve()
             elapsed = time.time() - start
             display_grid(grid, grid_labels)
@@ -275,7 +236,7 @@ def show_dashboard():
     redo_stack = []
 
     # Get the solution grid using your a_star solver
-    solution_grid, _ = a_star(initial_grid)
+    solution_grid, _ = BacktrackingSolver(initial_grid).solve()
 
     def check_win():
         for i in range(9):
@@ -362,13 +323,13 @@ def show_dashboard():
         timer_label.config(text="Time: 00:00")
 
     # Load and resize button images (small, e.g., 28x28)
-    clear_img = Image.open("clear.png").resize((28, 28), Image.LANCZOS)
+    clear_img = Image.open(asset("clear.png")).resize((28, 28), Image.LANCZOS)
     clear_photo = ImageTk.PhotoImage(clear_img)
-    solve_img = Image.open("ai.png").resize((28, 28), Image.LANCZOS)
+    solve_img = Image.open(asset("ai.png")).resize((28, 28), Image.LANCZOS)
     solve_photo = ImageTk.PhotoImage(solve_img)
-    reset_img = Image.open("reset.png").resize((28, 28), Image.LANCZOS)
+    reset_img = Image.open(asset("reset.png")).resize((28, 28), Image.LANCZOS)
     reset_photo = ImageTk.PhotoImage(reset_img)
-    pause_img = Image.open("pause-play.png").resize((28, 28), Image.LANCZOS)
+    pause_img = Image.open(asset("pause-play.png")).resize((28, 28), Image.LANCZOS)
     pause_photo = ImageTk.PhotoImage(pause_img)
 
     # Add control buttons (with images, small size, no color)
@@ -405,108 +366,6 @@ def show_dashboard():
     )
     solve_btn.image = solve_photo
     solve_btn.pack(side="left", padx=3)
-
-    # Color the difficulty, algorithm, and solve buttons
-    difficulty_menu.config(bg="#ffe082", activebackground="#ffd54f")
-    algo_menu.config(bg="#c8e6c9", activebackground="#81c784")
-
-    # Sudoku grid
-    wrapper = tk.Frame(root, bg="#ffffff")
-    wrapper.pack(pady=10)
-
-    grid_labels = [[None for _ in range(9)] for _ in range(9)]
-    user_entries = [[False for _ in range(9)] for _ in range(9)]
-    pencil_marks = [[set() for _ in range(9)] for _ in range(9)]  # For pencil marks
-    selected_cell = [None, None]
-    move_stack = []  # For undo/redo
-    redo_stack = []
-
-    # Get the solution grid using your a_star solver
-    solution_grid, _ = a_star(initial_grid)
-
-    def check_win():
-        for i in range(9):
-            for j in range(9):
-                user_val = grid_labels[i][j].cget("text")
-                sol_val = str(solution_grid[i][j])
-                if user_val != sol_val:
-                    return False
-        return True
-
-    def highlight_related(i, j):
-        for x in range(9):
-            for y in range(9):
-                grid_labels[x][y].config(bg="#f9f9f9")
-        for k in range(9):
-            grid_labels[i][k].config(bg="#e3f2fd")  # Row
-            grid_labels[k][j].config(bg="#e3f2fd")  # Col
-        block_row, block_col = i//3, j//3
-        for x in range(block_row*3, block_row*3+3):
-            for y in range(block_col*3, block_col*3+3):
-                grid_labels[x][y].config(bg="#bbdefb")
-        grid_labels[i][j].config(bg="#ffe082")  # Selected cell
-
-    def cell_click(event, i, j):
-        selected_cell[0], selected_cell[1] = i, j
-        highlight_related(i, j)
-
-    def update_pencil_marks(i, j):
-        label = grid_labels[i][j]
-        if pencil_marks[i][j]:
-            label.config(text="\n".join(sorted(str(n) for n in pencil_marks[i][j])), fg="#888", font=("Arial", 8))
-        else:
-            label.config(text="", fg="black", font=("Arial", 16))
-
-    def key_press(event):
-        i, j = selected_cell
-        if i is not None and j is not None and initial_grid[i][j] == 0:
-            if not timer_running[0]:
-                timer_running[0] = True
-                start_time[0] = time.time()
-                update_timer()
-            if event.char in "123456789":
-                prev = grid_labels[i][j].cget("text")
-                move_stack.append((i, j, prev, set(pencil_marks[i][j])))
-                redo_stack.clear()
-                correct = (int(event.char) == solution_grid[i][j])
-                color = "green" if correct else "red"
-                grid_labels[i][j].config(text=event.char, fg=color, font=("Arial", 16))
-                pencil_marks[i][j].clear()
-                user_entries[i][j] = True
-                if check_win():
-                    timer_running[0] = False
-                    for x in range(9):
-                        for y in range(9):
-                            grid_labels[x][y].config(bg="#c8e6c9")
-                    messagebox.showinfo("Congratulations!", f"You are a winner!\nTime: {timer_label.cget('text')[6:]}")
-            elif event.char == "p":  # Pencil mode
-                num = simpledialog.askstring("Pencil Mark", "Enter number(s) 1-9 (comma separated):")
-                if num:
-                    prev = set(pencil_marks[i][j])
-                    move_stack.append((i, j, grid_labels[i][j].cget("text"), prev))
-                    redo_stack.clear()
-                    pencil_marks[i][j] = set(n for n in num if n in "123456789")
-                    update_pencil_marks(i, j)
-            elif event.keysym in ("BackSpace", "Delete"):
-                prev = grid_labels[i][j].cget("text")
-                move_stack.append((i, j, prev, set(pencil_marks[i][j])))
-                redo_stack.clear()
-                grid_labels[i][j].config(text="", fg="black", font=("Arial", 16))
-                pencil_marks[i][j].clear()
-                user_entries[i][j] = False
-                update_pencil_marks(i, j)
-
-    def clear_board():
-        for i in range(9):
-            for j in range(9):
-                if initial_grid[i][j] == 0:
-                    grid_labels[i][j].config(text="", fg="black", font=("Arial", 16))
-                    pencil_marks[i][j].clear()
-                    update_pencil_marks(i, j)
-        move_stack.clear()
-        redo_stack.clear()
-        timer_running[0] = False
-        timer_label.config(text="Time: 00:00")
 
     # Color the difficulty, algorithm, and solve buttons
     difficulty_menu.config(bg="#ffe082", activebackground="#ffd54f")
